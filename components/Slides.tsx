@@ -507,7 +507,8 @@ export function Slides({
                 <p className="lede reveal reveal-3" style={{ marginTop: '1vh' }}>
                   The competitive landscape sorts cleanly along two axes: openness and agentic depth. The upper-right is empty.
                 </p>
-                <table className="compare reveal reveal-4">
+                <div className="compare-scroll reveal reveal-4">
+                <table className="compare">
                   <thead>
                     <tr>
                       <th></th>
@@ -594,6 +595,7 @@ export function Slides({
                     </tr>
                   </tbody>
                 </table>
+                </div>
               </div>
       </section>
 

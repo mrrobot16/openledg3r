@@ -22,7 +22,15 @@ export function PitchDeck() {
   const demoInputRef = useRef<HTMLTextAreaElement>(null);
   const demoPanelRef = useRef<HTMLDivElement>(null);
   const touchStartX = useRef(0);
+  const touchSwipeActive = useRef(false);
   const demoTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  const shouldIgnoreSwipe = useCallback((target: EventTarget | null) => {
+    if (!(target instanceof Element)) return true;
+    return !!target.closest(
+      "textarea, input, button, select, a, .overview, .demo-input, .toc-row, .compare-scroll"
+    );
+  }, []);
 
   const showSlide = useCallback(
     (idx: number, { push = false }: { push?: boolean } = {}) => {
@@ -118,10 +126,27 @@ export function PitchDeck() {
   }, [next, prev, showSlide, toggleOverview]);
 
   useEffect(() => {
+    const active = document.querySelector(".slide.active");
+    if (active instanceof HTMLElement) {
+      active.scrollTop = 0;
+    }
+  }, [current]);
+
+  useEffect(() => {
     const onTouchStart = (e: TouchEvent) => {
+      if (overviewOpen || shouldIgnoreSwipe(e.target)) {
+        touchSwipeActive.current = false;
+        return;
+      }
+      touchSwipeActive.current = true;
       touchStartX.current = e.touches[0].clientX;
     };
     const onTouchEnd = (e: TouchEvent) => {
+      if (!touchSwipeActive.current || shouldIgnoreSwipe(e.target)) {
+        touchSwipeActive.current = false;
+        return;
+      }
+      touchSwipeActive.current = false;
       const dx = e.changedTouches[0].clientX - touchStartX.current;
       if (Math.abs(dx) > 50) {
         if (dx < 0) next();
@@ -129,13 +154,13 @@ export function PitchDeck() {
       }
     };
 
-    document.addEventListener("touchstart", onTouchStart);
-    document.addEventListener("touchend", onTouchEnd);
+    document.addEventListener("touchstart", onTouchStart, { passive: true });
+    document.addEventListener("touchend", onTouchEnd, { passive: true });
     return () => {
       document.removeEventListener("touchstart", onTouchStart);
       document.removeEventListener("touchend", onTouchEnd);
     };
-  }, [next, prev]);
+  }, [next, prev, shouldIgnoreSwipe, overviewOpen]);
 
   useEffect(() => {
     return () => demoTimers.current.forEach(clearTimeout);
@@ -150,8 +175,9 @@ export function PitchDeck() {
     <>
       <div className="chrome-brand">
         <Logo className="brand-logo" variant="full" />
-        <span>
-          <span className="brand">OPEN·LEDGER</span> &nbsp;·&nbsp; PITCH DECK
+        <span className="chrome-brand-text">
+          <span className="brand">OPEN·LEDGER</span>
+          <span className="chrome-brand-extra"> · PITCH DECK</span>
         </span>
       </div>
 
@@ -160,7 +186,12 @@ export function PitchDeck() {
       </div>
 
       <div className="chrome-bottom">
-        <span>{slideLabel}</span>
+        <span>
+          <span className="slide-label-full">{slideLabel}</span>
+          <span className="slide-label-short">
+            {slideNum} / {totalNum}
+          </span>
+        </span>
         <div className="progress">
           <span style={{ width: `${progressPct}%` }} />
         </div>
