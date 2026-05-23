@@ -1,13 +1,20 @@
 "use client";
 
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Slides, SLIDE_TITLES } from "@/components/Slides";
 import { buildDemoLines, DEMO_PRESETS, type DemoLine } from "@/lib/demo";
-
-const TOTAL = SLIDE_TITLES.length;
+import {
+  slideIndexFromPath,
+  slidePath,
+  TOTAL_SLIDES as TOTAL,
+} from "@/lib/slides";
 
 export function PitchDeck() {
-  const [current, setCurrent] = useState(0);
+  const pathname = usePathname();
+  const router = useRouter();
+  const current = slideIndexFromPath(pathname);
   const [overviewOpen, setOverviewOpen] = useState(false);
   const [demoStatus, setDemoStatus] = useState("awaiting input");
   const [demoLines, setDemoLines] = useState<DemoLine[]>([]);
@@ -16,9 +23,16 @@ export function PitchDeck() {
   const touchStartX = useRef(0);
   const demoTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
-  const showSlide = useCallback((idx: number) => {
-    setCurrent(((idx % TOTAL) + TOTAL) % TOTAL);
-  }, []);
+  const showSlide = useCallback(
+    (idx: number, { push = false }: { push?: boolean } = {}) => {
+      const normalized = ((idx % TOTAL) + TOTAL) % TOTAL;
+      const path = slidePath(normalized);
+      if (path === pathname) return;
+      if (push) router.push(path, { scroll: false });
+      else router.replace(path, { scroll: false });
+    },
+    [pathname, router]
+  );
 
   const next = useCallback(() => showSlide(current + 1), [current, showSlide]);
   const prev = useCallback(() => showSlide(current - 1), [current, showSlide]);
@@ -26,7 +40,7 @@ export function PitchDeck() {
   const goTo = useCallback(
     (idx: number) => {
       setOverviewOpen(false);
-      showSlide(idx);
+      showSlide(idx, { push: true });
     },
     [showSlide]
   );
@@ -186,15 +200,15 @@ export function PitchDeck() {
         <h2>Eleven chapters · one ledger.</h2>
         <div className="grid" id="overviewGrid">
           {SLIDE_TITLES.map((title, i) => (
-            <button
-              type="button"
+            <Link
               key={title}
+              href={slidePath(i)}
               className="card"
-              onClick={() => goTo(i)}
+              onClick={() => setOverviewOpen(false)}
             >
               <div className="n">{String(i + 1).padStart(2, "0")}</div>
               <div className="t">{title}</div>
-            </button>
+            </Link>
           ))}
         </div>
       </div>
